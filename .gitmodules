@@ -22,3 +22,21 @@
 [submodule "bundle/omnisharp-vim"]
 	path = bundle/omnisharp-vim
 	url = git@github.com:OmniSharp/omnisharp-vim.git
+[submodule "bundle/ultisnips"]
+	path = bundle/ultisnips
+	url = git@github.com:SirVer/ultisnips.git
+[submodule "bundle/vim-easymotion"]
+	path = bundle/vim-easymotion
+	url = git@github.com:easymotion/vim-easymotion.git
+[submodule "bundle/deoplete.nvim"]
+	path = bundle/deoplete.nvim
+	url = git@github.com:Shougo/deoplete.nvim.git
+[submodule "bundle/deoplete-go"]
+	path = bundle/deoplete-go
+	url = git@github.com:zchee/deoplete-go.git
+[submodule "bundle/vim-easyclip"]
+	path = bundle/vim-easyclip
+	url = git@github.com:svermeulen/vim-easyclip.git
+[submodule "bundle/vim-repeat"]
+	path = bundle/vim-repeat
+	url = git@github.com:tpope/vim-repeat.git
