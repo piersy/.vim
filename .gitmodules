@@ -34,9 +34,9 @@
 [submodule "bundle/deoplete-go"]
 	path = bundle/deoplete-go
 	url = git@github.com:zchee/deoplete-go.git
-[submodule "bundle/vim-easyclip"]
-	path = bundle/vim-easyclip
-	url = git@github.com:svermeulen/vim-easyclip.git
 [submodule "bundle/vim-repeat"]
 	path = bundle/vim-repeat
 	url = git@github.com:tpope/vim-repeat.git
+[submodule "bundle/neopairs.vim"]
+	path = bundle/neopairs.vim
+	url = git@github.com:Shougo/neopairs.vim.git

@@ -1,1 +1,1 @@
-/home/piers/.vimrc
+/home/piers/.config/nvim/.vimrc

@@ -1,3 +1,6 @@
+" To disable a plugin, add it's bundle name to the following list
+let g:pathogen_disabled = []
+call add(g:pathogen_disabled, 'omnisharp-vim')
 execute pathogen#infect()
 syntax on
 filetype plugin indent on
@@ -10,6 +13,9 @@ if &term =~ '256color'
   set t_ut=
 endif
 
+"This ensures that the contents of the clipboard are written to the system
+"clipboard on leaving vim
+autocmd VimLeave * call system("xsel -ib", getreg())
 "Disable swap files they are annoying
 set noswapfile
 "Enable backup - they are useful
@@ -69,17 +75,27 @@ set statusline+=\ %P    "percent through file
 
 " This sets the textwidth automatically for markdown files (README.md)
 au BufRead,BufNewFile *.md setlocal textwidth=80
+
 "This ensures that text that is pasted over in visual mode does not
 "overwrite the last yanked text
-vnoremap p "_dP
-"Ensure quickfix always open at the bottom
+"check if the cursor is at the end of the line col(".") == col("$")-1
+"vnoremap p "_dhp  
+"
+"Ensure quickfix always open at always bottom
 autocmd FileType qf wincmd J
 "pgup / pgdown move too far to track text easily but ctrl-d and ctrl-u are hard to reach and not comfy
 map <PageUp> <C-U>
 map <PageDown> <C-D>
-"easy buffer switchin
 nnoremap <C-H> :<C-U>bp<CR>
 nnoremap <C-L> :<C-U>bn<CR>
+
+"Look more at this - these commadns sort of working - http://stackoverflow.com/questions/7614546/vim-cursorline-color-change-in-insert-mode
+"set cursorline
+"autocmd InsertEnter * highlight CursorLine guifg=white guibg=blue ctermfg=white ctermbg=blue
+"autocmd InsertLeave * highlight CursorLine guifg=white guibg=black ctermfg=white ctermbg=darkblue
+"Good article on statusline config
+"http://www.blaenkdenum.com/posts/a-simpler-vim-statusline/
+
 "Attempt to change cursor color
 "if &term =~ "xterm\\|rxvt"
 "    "use an orange cursor in insert mode
@@ -92,6 +108,7 @@ nnoremap <C-L> :<C-U>bn<CR>
 "    " use \003]12;gray\007 for gnome-terminal and rxvt up to
 "   " version 9.21
 "endif
+"
 "if &term =~ '^xterm\\|rxvt'
 "    solid underscore
 "    let &t_SI .= "\<Esc>[4 q"
@@ -111,42 +128,26 @@ let g:arpeggio_timeoutlen=100
             "nnoremap <Plug>(arpeggio-default:;) :
 "nnoremap <Plug>(arpeggio-default:;) :
 Arpeggio inoremap df  <Esc>
-Arpeggio vnoremap df  <Esc>
+"Not really sure that this is necessary in
+"since i only go into visual to do specific things
+"and those thing end with a yank paste or insert which exits visual
+"Arpeggio vnoremap df  <Esc>
 Arpeggio cnoremap df  <C-c>
+Arpeggio inoremap DF  <Esc>
+"Arpeggio vnoremap DF  <Esc>
+Arpeggio cnoremap DF  <C-c>
 Arpeggio inoremap jk  <Cr>
 Arpeggio cnoremap jk  <Cr>
 Arpeggio nnoremap jk  <Cr>
 Arpeggio nmap lk 15k
 Arpeggio nmap ds 15j
-"Explore in vim
-"
-" Toggle Vexplore with Ctrl-E
-"let g:netrw_winsize = -28
-function! ToggleVExplorer()
-    if exists("t:expl_buf_num")
-        let expl_win_num = bufwinnr(t:expl_buf_num)
-        if expl_win_num != -1
-            let cur_win_nr = winnr()
-            exec expl_win_num . 'wincmd w'
-            close
-            exec cur_win_nr . 'wincmd w'
-            unlet t:expl_buf_num
-        else
-            unlet t:expl_buf_num
-        endif
-    else
-        exec '1wincmd w' 
-        Vexplore
-        let t:expl_buf_num = bufnr("%")
-    endif
-endfunction
-"map <silent> <C-E> :call ToggleVExplorer()<CR>
 
+"
 "Autocomplete with ctrl space
 " Next three lines are to enable C-Space to autocomplete, omnicomplete
 "inoremap <C-Space> <C-x><C-o>
-"imap <buffer> <Nul> <C-Space>
-"smap <buffer> <Nul> <C-Space
+"imap <Nul> <C-Space>
+"smap <Nul> <C-Space
 
 "or this but both seem to fail
 function! Auto_complete_string()
@@ -174,7 +175,7 @@ let g:EasyMotion_do_mapping = 0 " Disable default mappings
 let g:EasyMotion_keys = 'abcdefghipqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;,.§'
 " we need to map s in this way to avoid a clash with ds
 nmap <Plug>(arpeggio-default:s) <Plug>(easymotion-s)
-vmap <Plug>(arpeggio-default:s) <Plug>(easymotion-s)
+"vmap <Plug>(arpeggio-default:s) <Plug>(easymotion-s)
 "Map bi directional line motion
 Arpeggio nmap ;l <Plug>(easymotion-bd-jk)
 Arpeggio vmap ;l <Plug>(easymotion-bd-jk)
@@ -183,7 +184,7 @@ nnoremap <Plug>(arpeggio-default:;) :
 vnoremap <Plug>(arpeggio-default:;) :
 nnoremap : ;            
 vnoremap : ;            
-"vmap s <Plug>(easymotion-s)
+vmap s <Plug>(easymotion-s)
 "nmap f <Plug>(easymotion-f)
 "nmap F <Plug>(easymotion-F)
 "End
@@ -191,8 +192,31 @@ vnoremap : ;
 cmap w!! %!sudo tee > /dev/null %
 " Open nerdtree by default
 "autocmd vimenter * NERDTree
-"close vim if nerdtree is the only open window
-autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+
+"Close easily
+autocmd BufEnter * call CloseVimWhenEditableFilesClosed()
+function! CloseVimWhenEditableFilesClosed()
+    "echom "BufEnterBegin"
+    let windows = winnr('$')
+    " more than just nerd tree and quickfix open so return
+    if windows > 2
+        return
+    endif
+    let i = 1
+    while i <= windows
+        "echom "". i .": buftype'". getbufvar(winbufnr(i), '&buftype')."'"
+        if getbufvar(winbufnr(i), '&buftype') == ''
+            "this is an editable buffer so return
+            "echom "BufEnterEnd"
+            return
+        endif
+        let i += 1
+    endwhile
+    "all buffers uneditable so close
+    "echom "BufEnterEnd"
+    qa
+endfunction
+
 " Open nerd tree if no file
 autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 0 && !exists("s:std_in") | NERDTree | endif
@@ -229,9 +253,9 @@ nmap <Leader>x :<C-u>Explore<CR>
 " commands so noremap does not work for plug but we need to use it to
 " protect against our mapping of the colon to semicolon
 " Turn on case insensitive feature
-nnoremap <Plug>(arpeggio-default:a) a
-nnoremap <Plug>(arpeggio-default:u) u
-nnoremap <Plug>(arpeggio-default:i) i
+"nnoremap <Plug>(arpeggio-default:a) a
+"nnoremap <Plug>(arpeggio-default:u) u
+"nnoremap <Plug>(arpeggio-default:i) i
 let g:EasyMotion_smartcase = 1
 au FileType go nmap <Leader>d <Plug>(go-doc-browser)
 au FileType go nmap <leader>s <Plug>(go-implements)
@@ -245,13 +269,13 @@ au FileType go noremap <leader>b :w<bar>GoInstall <Cr>
 au FileType go noremap <leader>v :w<bar>GoVet <Cr>
 au FileType go noremap <Leader>r :w<bar>GoRun<CR>
 au FileType go noremap <leader>t :w<bar>GoTest<CR>
-au FileType go Arpeggio noremap as :w<bar>GoInstall <Cr>
-au FileType go Arpeggio noremap ui :w<bar>GoInstall <Cr>
+au FileType go Arpeggionnoremap ui :w<bar>GoInstall <Cr>
 au FileType go noremap <F7> :TagbarToggle<CR>
 "au FileType go Arpeggio nmap df <Plug>(go-def)
 let g:go_fmt_command = "goimports"
 "Set type info for word under cursor to automatically display
 let g:go_auto_type_info = 1
+let g:go_list_type = "quickfix"
 " End
 
 " Omnisharp
@@ -293,79 +317,79 @@ let g:syntastic_mode_map = {
         \ "active_filetypes": ["cs"],
         \ "passive_filetypes": [] }
 
-let g:syntastic_cs_checkers = ['syntax', 'semantic', 'issues']
-" If you are using the omnisharp-roslyn backend, use the following
-" let g:syntastic_cs_checkers = ['code_checker']
-augroup omnisharp_commands
-    autocmd!
-
-    "Set autocomplete function to OmniSharp (if not using YouCompleteMe completion plugin)
-    autocmd FileType cs setlocal omnifunc=OmniSharp#Complete
-
-    " Synchronous build (blocks Vim)
-    "autocmd FileType cs nnoremap <F5> :wa!<cr>:OmniSharpBuild<cr>
-    " Builds can also run asynchronously with vim-dispatch installed
-    autocmd FileType cs nnoremap <leader>b :wa!<cr>:OmniSharpBuildAsync<cr>
-    " automatic syntax check on events (TextChanged requires Vim 7.4)
-    autocmd BufEnter,TextChanged,InsertLeave *.cs SyntasticCheck
-
-    " Automatically add new cs files to the nearest project on save
-    autocmd BufWritePost *.cs call OmniSharp#AddToProject()
-
-    "show type information automatically when the cursor stops moving
-    autocmd CursorHold *.cs call OmniSharp#TypeLookupWithoutDocumentation()
-
-    "The following commands are contextual, based on the current cursor position.
-
-    autocmd FileType cs nnoremap gd :OmniSharpGotoDefinition<cr>
-    autocmd FileType cs nnoremap <leader>fi :OmniSharpFindImplementations<cr>
-    autocmd FileType cs nnoremap <leader>ft :OmniSharpFindType<cr>
-    autocmd FileType cs nnoremap <leader>fs :OmniSharpFindSymbol<cr>
-    autocmd FileType cs nnoremap <leader>fu :OmniSharpFindUsages<cr>
-    "finds members in the current buffer
-    autocmd FileType cs nnoremap <leader>fm :OmniSharpFindMembers<cr>
-    " cursor can be anywhere on the line containing an issue
-    autocmd FileType cs nnoremap <leader>x  :OmniSharpFixIssue<cr>
-    autocmd FileType cs nnoremap <leader>fx :OmniSharpFixUsings<cr>
-    autocmd FileType cs nnoremap <leader>tt :OmniSharpTypeLookup<cr>
-    autocmd FileType cs nnoremap <leader>dc :OmniSharpDocumentation<cr>
-    "navigate up by method/property/field
-    autocmd FileType cs nnoremap <C-K> :OmniSharpNavigateUp<cr>
-    "navigate down by method/property/field
-    autocmd FileType cs nnoremap <C-J> :OmniSharpNavigateDown<cr>
-
-augroup END
-
-
-" this setting controls how long to wait (in ms) before fetching type / symbol information.
-set updatetime=500
-" Remove 'Press Enter to continue' message when type information is longer than one line.
-set cmdheight=2
-
-" Contextual code actions (requires CtrlP or unite.vim)
-nnoremap <leader><space> :OmniSharpGetCodeActions<cr>
-" Run code actions with text selected in visual mode to extract method
-vnoremap <leader><space> :call OmniSharp#GetCodeActions('visual')<cr>
-
-" rename with dialog
-nnoremap <leader>nm :OmniSharpRename<cr>
-nnoremap <F2> :OmniSharpRename<cr>
-" rename without dialog - with cursor on the symbol to rename... ':Rename newname'
-command! -nargs=1 Rename :call OmniSharp#RenameTo("<args>")
-
-" Force OmniSharp to reload the solution. Useful when switching branches etc.
-nnoremap <leader>rl :OmniSharpReloadSolution<cr>
-nnoremap <leader>cf :OmniSharpCodeFormat<cr>
-" Load the current .cs file to the nearest project
-nnoremap <leader>tp :OmniSharpAddToProject<cr>
-
-" (Experimental - uses vim-dispatch or vimproc plugin) - Start the omnisharp server for the current solution
-nnoremap <leader>ss :OmniSharpStartServer<cr>
-nnoremap <leader>sp :OmniSharpStopServer<cr>
-
-" Add syntax highlighting for types and interfaces
-nnoremap <leader>th :OmniSharpHighlightTypes<cr>
-" End
+"let g:syntastic_cs_checkers = ['syntax', 'semantic', 'issues']
+"" If you are using the omnisharp-roslyn backend, use the following
+"" let g:syntastic_cs_checkers = ['code_checker']
+"augroup omnisharp_commands
+"    autocmd!
+"
+"    "Set autocomplete function to OmniSharp (if not using YouCompleteMe completion plugin)
+"    autocmd FileType cs setlocal omnifunc=OmniSharp#Complete
+"
+"    " Synchronous build (blocks Vim)
+"    "autocmd FileType cs nnoremap <F5> :wa!<cr>:OmniSharpBuild<cr>
+"    " Builds can also run asynchronously with vim-dispatch installed
+"    autocmd FileType cs nnoremap <leader>b :wa!<cr>:OmniSharpBuildAsync<cr>
+"    " automatic syntax check on events (TextChanged requires Vim 7.4)
+"    autocmd BufEnter,TextChanged,InsertLeave *.cs SyntasticCheck
+"
+"    " Automatically add new cs files to the nearest project on save
+"    autocmd BufWritePost *.cs call OmniSharp#AddToProject()
+"
+"    "show type information automatically when the cursor stops moving
+"    autocmd CursorHold *.cs call OmniSharp#TypeLookupWithoutDocumentation()
+"
+"    "The following commands are contextual, based on the current cursor position.
+"
+"    autocmd FileType cs nnoremap gd :OmniSharpGotoDefinition<cr>
+"    autocmd FileType cs nnoremap <leader>fi :OmniSharpFindImplementations<cr>
+"    autocmd FileType cs nnoremap <leader>ft :OmniSharpFindType<cr>
+"    autocmd FileType cs nnoremap <leader>fs :OmniSharpFindSymbol<cr>
+"    autocmd FileType cs nnoremap <leader>fu :OmniSharpFindUsages<cr>
+"    "finds members in the current buffer
+"    autocmd FileType cs nnoremap <leader>fm :OmniSharpFindMembers<cr>
+"    " cursor can be anywhere on the line containing an issue
+"    autocmd FileType cs nnoremap <leader>x  :OmniSharpFixIssue<cr>
+"    autocmd FileType cs nnoremap <leader>fx :OmniSharpFixUsings<cr>
+"    autocmd FileType cs nnoremap <leader>tt :OmniSharpTypeLookup<cr>
+"    autocmd FileType cs nnoremap <leader>dc :OmniSharpDocumentation<cr>
+"    "navigate up by method/property/field
+"    autocmd FileType cs nnoremap <C-K> :OmniSharpNavigateUp<cr>
+"    "navigate down by method/property/field
+"    autocmd FileType cs nnoremap <C-J> :OmniSharpNavigateDown<cr>
+"
+"augroup END
+"
+"
+"" this setting controls how long to wait (in ms) before fetching type / symbol information.
+"set updatetime=500
+"" Remove 'Press Enter to continue' message when type information is longer than one line.
+"set cmdheight=2
+"
+"" Contextual code actions (requires CtrlP or unite.vim)
+"nnoremap <leader><space> :OmniSharpGetCodeActions<cr>
+"" Run code actions with text selected in visual mode to extract method
+"vnoremap <leader><space> :call OmniSharp#GetCodeActions('visual')<cr>
+"
+"" rename with dialog
+"nnoremap <leader>nm :OmniSharpRename<cr>
+"nnoremap <F2> :OmniSharpRename<cr>
+"" rename without dialog - with cursor on the symbol to rename... ':Rename newname'
+"command! -nargs=1 Rename :call OmniSharp#RenameTo("<args>")
+"
+"" Force OmniSharp to reload the solution. Useful when switching branches etc.
+"nnoremap <leader>rl :OmniSharpReloadSolution<cr>
+"nnoremap <leader>cf :OmniSharpCodeFormat<cr>
+"" Load the current .cs file to the nearest project
+"nnoremap <leader>tp :OmniSharpAddToProject<cr>
+"
+"" (Experimental - uses vim-dispatch or vimproc plugin) - Start the omnisharp server for the current solution
+"nnoremap <leader>ss :OmniSharpStartServer<cr>
+"nnoremap <leader>sp :OmniSharpStopServer<cr>
+"
+"" Add syntax highlighting for types and interfaces
+"nnoremap <leader>th :OmniSharpHighlightTypes<cr>
+"" End
 
 "Syntastic
 set statusline+=%#warningmsg#
@@ -390,4 +414,41 @@ let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
 let g:go_highlight_operators = 1
 " End
+"
+" deoplete config
+let g:deoplete#enable_at_startup = 1
+" disable autocomplete
+let g:deoplete#disable_auto_complete = 1
+if has("gui_running")
+    inoremap <silent><expr> <Nul> deoplete#mappings#manual_complete()
+else
+    inoremap <silent><expr> <C-@> deoplete#mappings#manual_complete()
+endif
 
+"Add mapping to make ctrl space go to next completion option
+"<Nul> is interpreted as ctrl-space
+"inoremap <Nul> <C-n>
+inoremap <C-j> <C-n>
+inoremap <C-k> <C-p>
+"Ensure that neopairs is adding parenthesis for methods
+call deoplete#custom#set('_', 'converters', ['converter_auto_paren'])
+"utilsnips
+let g:UltiSnipsSnippetDirectories=["bundle/vim-go/gosnippets/UtilSnips"]
+" Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+
+" If you want :UltiSnipsEdit to split your window.
+inoremap <silent><expr><TAB> pumvisible() ? "\<C-n>" : "\<TAB>"
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+
+
+"let g:EasyClipUseYankDefaults=0
+"let g:EasyClipUseCutDefaults=0
+"let g:EasyClipUsePasteDefaults=0
+"let g:EasyClipEnableBlackHoleRedirect=0
+"let g:EasyClipUsePasteToggleDefaults=0
+
+
+"Neovim likes this here
+set spell spelllang=en_gb
