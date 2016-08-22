@@ -6,7 +6,7 @@
 	url = https://github.com/tomasr/molokai.git
 [submodule "bundle/vim-go"]
 	path = bundle/vim-go
-	url = https://github.com/fatih/vim-go.git
+	url = https://github.com/piersy/vim-go.git
 [submodule "bundle/syntastic"]
 	path = bundle/syntastic
 	url = git@github.com:scrooloose/syntastic.git
